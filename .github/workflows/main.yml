@@ -20,6 +20,11 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
+      - name: Setup Gradle 4.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '4.9'
+
       - name: Cache Gradle home
         uses: actions/cache@v4
         with:
@@ -27,22 +32,19 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('build.gradle','gradle.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      - name: Generate Gradle wrapper
-        run: gradle wrapper --gradle-version 4.9
-
       - name: Setup Forge workspace (attempt 1)
         id: setup1
         continue-on-error: true
-        run: ./gradlew setupDecompWorkspace --no-daemon --stacktrace
+        run: gradle setupDecompWorkspace --no-daemon --stacktrace
         timeout-minutes: 50
 
-      - name: Setup Forge workspace (attempt 2 if failed)
+      - name: Setup Forge workspace (attempt 2)
         if: steps.setup1.outcome == 'failure'
-        run: ./gradlew setupDecompWorkspace --no-daemon --stacktrace
+        run: gradle setupDecompWorkspace --no-daemon --stacktrace
         timeout-minutes: 50
 
       - name: Build mod
-        run: ./gradlew build --no-daemon
+        run: gradle build --no-daemon
         timeout-minutes: 20
 
       - name: Upload JAR
