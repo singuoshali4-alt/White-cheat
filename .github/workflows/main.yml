@@ -24,7 +24,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.gradle
-          key: ${{ runner.os }}-gradle-forge-1122-v3
+          key: ${{ runner.os }}-gradle-forge-1122-v4
           restore-keys: ${{ runner.os }}-gradle-forge-
 
       - name: Download Forge 1.12.2 MDK
@@ -36,11 +36,14 @@ jobs:
             "https://files.minecraftforge.net/maven/net/minecraftforge/forge/1.12.2-14.23.5.2860/forge-1.12.2-14.23.5.2860-mdk.zip" \
             -o forge-mdk.zip
           unzip -q forge-mdk.zip -d forge-mdk
+          echo "MDK contents:"; ls forge-mdk/
 
       - name: Inject source code into MDK
         run: |
           rm -rf forge-mdk/src
-          cp -r src forge-mdk/src
+          SRC=$(find . -path ./forge-mdk -prune -o -type d -name "src" -print | head -1)
+          echo "Found src at: $SRC"
+          cp -r "$SRC" forge-mdk/src
           sed -i 's/jcenter()/mavenCentral()/g' forge-mdk/build.gradle
           sed -i 's/group = "com.example"/group = "com.whiteclient"/g' forge-mdk/build.gradle
           sed -i 's/archivesBaseName = "modid"/archivesBaseName = "WhiteClient"/g' forge-mdk/build.gradle
