@@ -20,25 +20,46 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
-      - name: Cache Gradle
+      - name: Cache Gradle home
         uses: actions/cache@v4
         with:
           path: ~/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('build.gradle','gradle.properties') }}
-          restore-keys: ${{ runner.os }}-gradle-
+          key: ${{ runner.os }}-gradle-forge-1122-v3
+          restore-keys: ${{ runner.os }}-gradle-forge-
+
+      - name: Download Forge 1.12.2 MDK
+        run: |
+          curl -L --retry 5 --retry-delay 15 \
+            "https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2860/forge-1.12.2-14.23.5.2860-mdk.zip" \
+            -o forge-mdk.zip \
+          || curl -L --retry 5 --retry-delay 15 \
+            "https://files.minecraftforge.net/maven/net/minecraftforge/forge/1.12.2-14.23.5.2860/forge-1.12.2-14.23.5.2860-mdk.zip" \
+            -o forge-mdk.zip
+          unzip -q forge-mdk.zip -d forge-mdk
+
+      - name: Inject source code into MDK
+        run: |
+          rm -rf forge-mdk/src
+          cp -r src forge-mdk/src
+          sed -i 's/jcenter()/mavenCentral()/g' forge-mdk/build.gradle
+          sed -i 's/group = "com.example"/group = "com.whiteclient"/g' forge-mdk/build.gradle
+          sed -i 's/archivesBaseName = "modid"/archivesBaseName = "WhiteClient"/g' forge-mdk/build.gradle
 
       - name: Setup Forge workspace (attempt 1)
         id: setup1
         continue-on-error: true
+        working-directory: forge-mdk
         run: ./gradlew setupDecompWorkspace --no-daemon --stacktrace
-        timeout-minutes: 50
+        timeout-minutes: 55
 
       - name: Setup Forge workspace (attempt 2)
         if: steps.setup1.outcome == 'failure'
+        working-directory: forge-mdk
         run: ./gradlew setupDecompWorkspace --no-daemon --stacktrace
-        timeout-minutes: 50
+        timeout-minutes: 55
 
       - name: Build mod
+        working-directory: forge-mdk
         run: ./gradlew build --no-daemon
         timeout-minutes: 20
 
@@ -46,5 +67,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WhiteClient-1.12.2
-          path: build/libs/*.jar
+          path: forge-mdk/build/libs/*.jar
           if-no-files-found: error
